@@ -1,0 +1,61 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: #050505;
+  color: #e7f8ff;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-image:
+    radial-gradient(circle at 15% 10%, rgba(47, 243, 255, 0.12), transparent 28%),
+    radial-gradient(circle at 85% 80%, rgba(155, 92, 255, 0.12), transparent 28%),
+    linear-gradient(#050505, #050505);
+  background-attachment: fixed;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  border: 2px solid rgba(0, 0, 0, 0);
+  background: linear-gradient(180deg, rgba(47, 243, 255, 0.45), rgba(155, 92, 255, 0.45));
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.glass-card {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.05);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+}
+
+.neon-ring {
+  box-shadow:
+    0 0 0 1px rgba(47, 243, 255, 0.24),
+    0 0 26px rgba(47, 243, 255, 0.16),
+    inset 0 0 18px rgba(155, 92, 255, 0.08);
+}
