@@ -1,5 +1,9 @@
-import { ArrowUp, Paperclip } from "lucide-react";
+import { ArrowUp } from "lucide-react";
 import type { RefObject } from "react";
+import AddMenuButton from "./AddMenuButton";
+import type { MessageImage } from "./types";
+
+type AddAction = "upload" | "drive" | "photos";
 
 type ChatInputBarProps = {
   input: string;
@@ -7,20 +11,45 @@ type ChatInputBarProps = {
   textareaRef: RefObject<HTMLTextAreaElement>;
   onChange: (value: string) => void;
   onSend: () => void;
+  onAddAction?: (action: AddAction) => void;
+  onFilesSelected?: (files: FileList) => void;
+  pendingImages?: MessageImage[];
+  onRemovePendingImage?: (name: string) => void;
 };
 
-export default function ChatInputBar({ input, canSend, textareaRef, onChange, onSend }: ChatInputBarProps) {
+export default function ChatInputBar({
+  input,
+  canSend,
+  textareaRef,
+  onChange,
+  onSend,
+  onAddAction,
+  onFilesSelected,
+  pendingImages,
+  onRemovePendingImage
+}: ChatInputBarProps) {
   return (
     <div className="px-4 pb-5 pt-3 md:px-8">
       <div className="mx-auto max-w-4xl rounded-[28px] border border-cyan-300/20 bg-[#07101f]/92 p-2 shadow-[0_0_40px_rgba(47,243,255,0.12)] backdrop-blur-xl">
+        {Boolean(pendingImages?.length) && (
+          <div className="mb-2 flex flex-wrap gap-2 px-2 pt-1">
+            {pendingImages!.map((image) => (
+              <div key={image.name} className="group relative overflow-hidden rounded-lg border border-white/10">
+                <img src={image.previewUrl} alt={image.name} className="h-14 w-14 object-cover" />
+                <button
+                  type="button"
+                  onClick={() => onRemovePendingImage?.(image.name)}
+                  className="absolute right-1 top-1 rounded-full bg-black/65 px-1 text-xs text-white opacity-90 hover:bg-black"
+                  aria-label={`Remove ${image.name}`}
+                >
+                  x
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
         <div className="flex items-end gap-2">
-          <button
-            type="button"
-            className="rounded-full p-2 text-slate-400 transition hover:bg-white/10 hover:text-cyan-100"
-            aria-label="Attach file"
-          >
-            <Paperclip className="h-5 w-5" />
-          </button>
+          <AddMenuButton onAction={onAddAction} onFilesSelected={onFilesSelected} />
           <textarea
             ref={textareaRef}
             value={input}

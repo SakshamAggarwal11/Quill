@@ -57,6 +57,15 @@ export default function ChatMessages({ messages, isLoading }: ChatMessagesProps)
               >
                 {message.content || (isLoading ? "Thinking..." : "")}
               </ReactMarkdown>
+              {Boolean(message.images?.length) && (
+                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {message.images!.map((image) => (
+                    <div key={`${message.id}-${image.name}`} className="overflow-hidden rounded-xl border border-white/10">
+                      <img src={image.previewUrl} alt={image.name} className="h-24 w-full object-cover" />
+                    </div>
+                  ))}
+                </div>
+              )}
             </article>
           </div>
         );

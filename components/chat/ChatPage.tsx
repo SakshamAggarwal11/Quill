@@ -1,25 +1,24 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowUp,
   Briefcase,
   GraduationCap,
-  Lightbulb,
-  Plus,
-  Search,
   Sparkles,
   Code2,
+  X,
   Compass
 } from "lucide-react";
 import ChatMessages from "./ChatMessages";
 import ChatInputBar from "./ChatInputBar";
 import ChatSidebar, { type RecentThread, type SidebarSection } from "./ChatSidebar";
-import type { Message } from "./types";
+import AddMenuButton from "./AddMenuButton";
+import type { Message, MessageImage } from "./types";
 import { clearAuthSession } from "@/components/auth/session";
 import { useAuthSession } from "@/components/auth/useAuthSession";
+import QuillLogo from "@/components/landing/QuillLogo";
 
 const initialMessages: Message[] = [];
 
@@ -33,26 +32,29 @@ const quickActions = [
 
 const sectionPrompts: Record<SidebarSection, string> = {
   search: "Search your recents or ask me to find something in your chat history.",
-  chats: "Chat mode is active. Start a fresh conversation or pick a recent thread.",
+  chats: "Start a fresh conversation or pick a recent thread.",
   projects: "Project mode is active. Organize ideas, tasks, and milestones."
 };
 
-const initialRecents: RecentThread[] = [
-  { id: "r1", title: "Professional website for Quill chat", preview: "Make the chat interface feel polished and useful on the local machine." },
-  { id: "r2", title: "Naming an offline chat agent", preview: "Decide on a clean product name and visual identity." },
-  { id: "r3", title: "Rarest things in the world", preview: "Give me a concise response with interesting facts." },
-  { id: "r4", title: "Building Align: job scraping platform", preview: "Plan the interface and workflow for a dark themed app." },
-  { id: "r5", title: "AI-powered job matching SaaS plan", preview: "Sketch the product and core workflows for the app." },
-  { id: "r6", title: "Dark-themed Streamlit job market view", preview: "Make the dashboard more usable and modern." },
-  { id: "r7", title: "Automated job market trend analyzer", preview: "Explain the data flow and UI sections." },
-  { id: "r8", title: "Apna Galla FinTech landing and auth", preview: "Refine the landing page and sign in flow." },
-  { id: "r9", title: "Handwritten ledger app with OCR", preview: "Describe the offline workflow and modules." },
-  { id: "r10", title: "Scribe Social: AI-first note app", preview: "Plan a social note-taking experience." }
-];
+const initialRecents: RecentThread[] = [];
+
+function toTopicLabel(prompt: string): string {
+  const normalized = prompt.replace(/\s+/g, " ").trim();
+  if (!normalized) {
+    return "New chat";
+  }
+
+  const firstSentence = normalized.split(/[.!?]/)[0]?.trim() || normalized;
+  const words = firstSentence.split(" ").filter(Boolean);
+  const topic = words.slice(0, 6).join(" ").replace(/[,:;\-]+$/g, "");
+
+  return topic || normalized.slice(0, 36);
+}
 
 export default function ChatPage() {
   const router = useRouter();
   const session = useAuthSession();
+  const [now, setNow] = useState(() => new Date());
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeSection, setActiveSection] = useState<SidebarSection>("chats");
   const [searchQuery, setSearchQuery] = useState("");
@@ -60,6 +62,7 @@ export default function ChatPage() {
   const [sidebarNotice, setSidebarNotice] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [input, setInput] = useState("");
+  const [pendingImages, setPendingImages] = useState<MessageImage[]>([]);
   const [recents, setRecents] = useState<RecentThread[]>(initialRecents);
   const [isLoading, setIsLoading] = useState(false);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
@@ -71,19 +74,19 @@ export default function ChatPage() {
     }
   }, [router, session]);
 
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setNow(new Date());
+    }, 60_000);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, []);
+
   const handleSignOut = () => {
     clearAuthSession();
     router.push("/login");
-  };
-
-  const handleSectionChange = (section: SidebarSection) => {
-    setActiveSection(section);
-    setProfileMenuOpen(false);
-    setSearchQuery(section === "search" ? searchQuery : "");
-
-    if (section !== "search") {
-      setInput(sectionPrompts[section]);
-    }
   };
 
   const handleSearchChat = () => {
@@ -102,6 +105,61 @@ export default function ChatPage() {
     setProfileMenuOpen(false);
     setInput(recent.preview);
     setSidebarNotice(`Loaded recent: ${recent.title}`);
+  };
+
+  const handleAddAction = (action: "upload" | "drive" | "photos") => {
+    if (action === "drive") {
+      setSidebarNotice("Add from Drive selected. Connect a Drive source to enable import.");
+      return;
+    }
+
+    if (action === "photos") {
+      setSidebarNotice("Photos selected. Local photo library picker can be connected next.");
+      return;
+    }
+
+    setSidebarNotice("Upload files selected.");
+  };
+
+  const handleFilesSelected = async (files: FileList) => {
+    const list = Array.from(files);
+    if (list.length === 0) {
+      return;
+    }
+
+    const imageFiles = list.filter((file) => file.type.startsWith("image/"));
+    if (imageFiles.length === 0) {
+      setSidebarNotice("No image files selected. Please choose PNG, JPG, WEBP, or GIF.");
+      return;
+    }
+
+    const readImage = (file: File) =>
+      new Promise<MessageImage>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = typeof reader.result === "string" ? reader.result : "";
+          const base64 = result.includes(",") ? result.split(",")[1] : "";
+          resolve({
+            name: file.name,
+            mimeType: file.type || "image/png",
+            base64,
+            previewUrl: result
+          });
+        };
+        reader.onerror = () => reject(new Error(`Failed to read ${file.name}`));
+        reader.readAsDataURL(file);
+      });
+
+    try {
+      const images = await Promise.all(imageFiles.map((file) => readImage(file)));
+      setPendingImages((prev) => [...prev, ...images].slice(0, 6));
+
+      const names = images.slice(0, 2).map((file) => file.name).join(", ");
+      const suffix = images.length > 2 ? ` +${images.length - 2} more` : "";
+      setSidebarNotice(`Attached ${images.length} image${images.length === 1 ? "" : "s"}: ${names}${suffix}`);
+    } catch {
+      setSidebarNotice("Failed to read selected image files. Please try again.");
+    }
   };
 
   const filteredRecents = recents.slice(0, 10).filter((item) => {
@@ -125,39 +183,78 @@ export default function ChatPage() {
     scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [messages]);
 
-  const canSend = useMemo(() => input.trim().length > 0 && !isLoading, [input, isLoading]);
+  const canSend = useMemo(
+    () => (input.trim().length > 0 || pendingImages.length > 0) && !isLoading,
+    [input, isLoading, pendingImages.length]
+  );
   const isEmptyState = messages.length === 0;
+  const displayName = useMemo(() => {
+    if (session?.name?.trim()) {
+      return session.name.trim();
+    }
+
+    if (session?.email) {
+      return session.email.split("@")[0];
+    }
+
+    return "there";
+  }, [session?.email, session?.name]);
+
+  const dayGreeting = useMemo(() => {
+    const hour = now.getHours();
+
+    if (hour < 12) {
+      return "Morning";
+    }
+
+    if (hour < 17) {
+      return "Afternoon";
+    }
+
+    return "Evening";
+  }, [now]);
 
   const handleNewThread = () => {
     setMessages(initialMessages);
     setInput("");
+    setPendingImages([]);
     setActiveSection("chats");
     setSidebarNotice("Started a new chat thread.");
   };
 
+  const removePendingImage = (name: string) => {
+    setPendingImages((prev) => prev.filter((image) => image.name !== name));
+  };
+
   const handleSend = async () => {
     const trimmed = input.trim();
-    if (!trimmed || isLoading) {
+    if ((!trimmed && pendingImages.length === 0) || isLoading) {
       return;
     }
+
+    const prompt = trimmed || "Describe this image in detail.";
+    const imagesForMessage = [...pendingImages];
 
     const userMessage: Message = {
       id: crypto.randomUUID(),
       role: "user",
-      content: trimmed
+      content: prompt,
+      images: imagesForMessage
     };
 
     const assistantId = crypto.randomUUID();
     setInput("");
+    setPendingImages([]);
     setMessages((prev) => [...prev, userMessage, { id: assistantId, role: "assistant", content: "" }]);
     setRecents((prev) => {
+      const topic = toTopicLabel(prompt);
       const nextRecent: RecentThread = {
         id: crypto.randomUUID(),
-        title: trimmed.length > 42 ? `${trimmed.slice(0, 42)}...` : trimmed,
-        preview: trimmed
+        title: topic,
+        preview: prompt
       };
 
-      const nextList = [nextRecent, ...prev.filter((item) => item.preview !== trimmed)].slice(0, 10);
+      const nextList = [nextRecent, ...prev.filter((item) => item.preview !== prompt)].slice(0, 10);
       return nextList;
     });
     setIsLoading(true);
@@ -168,11 +265,19 @@ export default function ChatPage() {
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({ prompt: trimmed })
+        body: JSON.stringify({
+          prompt,
+          images: imagesForMessage.map((image) => image.base64)
+        })
       });
 
-      if (!response.ok || !response.body) {
-        throw new Error("Failed to reach local Ollama bridge");
+      if (!response.ok) {
+        const details = await response.text();
+        throw new Error(details || "Failed to reach local Ollama bridge");
+      }
+
+      if (!response.body) {
+        throw new Error("Empty response from local Ollama bridge");
       }
 
       const reader = response.body.getReader();
@@ -193,13 +298,16 @@ export default function ChatPage() {
         }
       }
     } catch (error) {
+      const fallbackMessage =
+        "Unable to stream from local Ollama. Make sure Ollama is running on http://localhost:11434 and a model is available.";
+      const errorMessage = error instanceof Error && error.message ? error.message : fallbackMessage;
+
       setMessages((prev) =>
         prev.map((msg) =>
           msg.id === assistantId
             ? {
                 ...msg,
-                content:
-                  "Unable to stream from local Ollama. Make sure Ollama is running on http://localhost:11434 and a model is available."
+                content: errorMessage
               }
             : msg
         )
@@ -241,27 +349,6 @@ export default function ChatPage() {
             <Sparkles className="h-4 w-4 text-cyan-200" />
             Quill Workspace
           </p>
-          <Link
-            href="/"
-            className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-xs text-slate-300 transition hover:bg-white/10"
-          >
-            Back to landing
-          </Link>
-          <div className="flex items-center gap-2">
-            <Link
-              href="/login"
-              className="rounded-full border border-cyan-300/30 bg-cyan-300/10 px-4 py-2 text-xs font-medium text-cyan-100 transition hover:bg-cyan-300/18"
-            >
-              Sign In
-            </Link>
-            <button
-              type="button"
-              onClick={handleSignOut}
-              className="rounded-full border border-violet-300/30 bg-violet-300/10 px-4 py-2 text-xs font-medium text-violet-100 transition hover:bg-violet-300/18"
-            >
-              Sign Out
-            </button>
-          </div>
         </header>
 
         {sidebarNotice && (
@@ -272,14 +359,34 @@ export default function ChatPage() {
 
         {isEmptyState ? (
           <div className="mx-auto flex w-full max-w-[920px] flex-1 flex-col items-center justify-center pb-16">
-            <h1 className="text-center text-4xl leading-tight font-serif text-[#e7f8ff] md:text-6xl">
-              <span className="mr-2 inline-block align-middle text-[#ff8e63]">
-                <Lightbulb className="h-8 w-8 md:h-10 md:w-10" />
-              </span>
-              {activeSection === "projects" ? "Personal Projects" : activeSection === "search" ? "Search Chats" : sectionPrompts[activeSection].split(".")[0]}
-            </h1>
+            <div className="flex items-center gap-4 md:gap-5">
+              <QuillLogo />
+              <h1 className="text-center text-4xl leading-tight font-serif text-[#e7f8ff] md:text-6xl">
+                {dayGreeting}, {displayName}
+              </h1>
+            </div>
+            <p className="mt-4 text-center text-sm text-slate-400 md:text-base">
+              {activeSection === "projects" ? "Personal project workspace is ready." : activeSection === "search" ? "Search your recent chats quickly." : "Start a fresh conversation in Quill."}
+            </p>
 
             <div className="mt-10 w-full rounded-[22px] border border-white/10 bg-[#07101f]/95 p-5 shadow-[0_22px_56px_rgba(0,0,0,0.45)] md:p-6">
+              {pendingImages.length > 0 && (
+                <div className="mb-4 flex flex-wrap gap-2">
+                  {pendingImages.map((image) => (
+                    <div key={image.name} className="relative overflow-hidden rounded-xl border border-white/10">
+                      <img src={image.previewUrl} alt={image.name} className="h-16 w-16 object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => removePendingImage(image.name)}
+                        className="absolute right-1 top-1 rounded-full bg-black/60 p-0.5 text-white hover:bg-black/80"
+                        aria-label={`Remove ${image.name}`}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
               <textarea
                 ref={textAreaRef}
                 value={input}
@@ -296,17 +403,11 @@ export default function ChatPage() {
               />
 
               <div className="mt-5 flex items-center justify-between">
-                <button
-                  type="button"
-                  className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-white/10 hover:text-cyan-100"
-                  aria-label="Attach"
-                >
-                  <Plus className="h-4 w-4" />
-                </button>
+                <AddMenuButton compact onAction={handleAddAction} onFilesSelected={handleFilesSelected} />
 
                 <div className="flex items-center gap-2">
                   <div className="flex items-center gap-2 text-sm text-slate-400">
-                    <span>{activeSection === "search" ? "Search your recents" : activeSection === "projects" ? "Project workspace" : activeSection === "artifacts" ? "Artifacts workspace" : activeSection === "code" ? "Code workspace" : activeSection === "customize" ? "Customize workspace" : "Quill Local"}</span>
+                    <span>{activeSection === "search" ? "Search your recents" : activeSection === "projects" ? "Project workspace" : "Quill Local"}</span>
                     <svg viewBox="0 0 16 16" className="h-3 w-3 fill-current text-slate-500" aria-hidden="true">
                       <path d="M4 6l4 4 4-4" />
                     </svg>
@@ -351,6 +452,10 @@ export default function ChatPage() {
               textareaRef={textAreaRef}
               onChange={setInput}
               onSend={() => void handleSend()}
+              onAddAction={handleAddAction}
+              onFilesSelected={handleFilesSelected}
+              pendingImages={pendingImages}
+              onRemovePendingImage={removePendingImage}
             />
           </>
         )}

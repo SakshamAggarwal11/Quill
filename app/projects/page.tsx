@@ -143,10 +143,17 @@ export default function ProjectsPage() {
                   </div>
                 </div>
                 <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-cyan-300 to-violet-300"
-                    style={{ width: `${tasks.length ? (completedCount / tasks.length) * 100 : 0}%` }}
-                  />
+                  <div className="flex h-full gap-1">
+                    {Array.from({ length: 10 }).map((_, index) => {
+                      const filled = tasks.length > 0 && index < Math.round((completedCount / tasks.length) * 10);
+                      return (
+                        <span
+                          key={`progress-${index}`}
+                          className={`h-full flex-1 rounded-full ${filled ? "bg-gradient-to-r from-cyan-300 to-violet-300" : "bg-white/10"}`}
+                        />
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             </div>
@@ -178,8 +185,11 @@ export default function ProjectsPage() {
                 type="button"
                 onClick={addTask}
                 className="rounded-2xl border border-cyan-300/30 bg-cyan-300/10 px-4 py-3 text-cyan-100 transition hover:bg-cyan-300/18"
+                aria-label="Add task"
+                title="Add task"
               >
                 <Plus className="h-5 w-5" />
+                <span className="sr-only">Add task</span>
               </button>
             </div>
 

@@ -2,10 +2,7 @@
 
 import {
   ArrowRight,
-  ArrowUpRight,
   CircleHelp,
-  FolderOpen,
-  Gift,
   Globe,
   HelpCircle,
   LogOut,
@@ -13,7 +10,6 @@ import {
   PanelLeftClose,
   Search,
   Settings,
-  UserCircle2,
   ChevronLeft,
   ChevronRight
 } from "lucide-react";
@@ -47,7 +43,6 @@ type ChatSidebarProps = {
 const sectionButtons: Array<{ key: SidebarSection; label: string; icon: React.ComponentType<{ className?: string }> }> = [
   { key: "chats", label: "New chat", icon: MessageSquarePlus },
   { key: "search", label: "Search chat", icon: Search },
-  { key: "projects", label: "Projects", icon: FolderOpen }
 ];
 
 export default function ChatSidebar({
@@ -85,7 +80,7 @@ export default function ChatSidebar({
         <button
           type="button"
           onClick={onNewThread}
-          className="mb-4 flex items-center justify-center gap-2 rounded-2xl border border-cyan-300/30 bg-cyan-300/10 px-3 py-3 text-sm text-cyan-100 transition hover:bg-cyan-300/18"
+          className="mb-4 flex items-center justify-center gap-2 rounded-2xl border border-cyan-300/30 bg-cyan-300/10 px-3 py-3 text-sm font-medium text-cyan-100 transition hover:bg-cyan-300/18"
         >
           <MessageSquarePlus className="h-4 w-4" />
           {open ? "New chat" : ""}
@@ -98,13 +93,25 @@ export default function ChatSidebar({
               <button
                 key={key}
                 type="button"
-                onClick={() => onSectionChange(key)}
+                onClick={() => {
+                  if (key === "chats") {
+                    onNewThread();
+                    return;
+                  }
+
+                  if (key === "search") {
+                    onSearchChat();
+                    return;
+                  }
+
+                  // onOpenProjects(); // Removed the call to onOpenProjects
+                }}
                 className={`flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition ${
-                  active ? "bg-white/10 text-white" : "text-slate-300 hover:bg-white/5 hover:text-white"
+                  active ? "bg-white/15 text-[#e7f8ff]" : "text-[#d5e7f3] hover:bg-white/5 hover:text-[#f4fbff]"
                 }`}
               >
                 <Icon className="h-5 w-5 shrink-0" />
-                {open && <span className="text-base">{label}</span>}
+                {open && <span className="text-base font-medium text-current">{label}</span>}
               </button>
             );
           })}
@@ -132,33 +139,34 @@ export default function ChatSidebar({
           </div>
         )}
 
-        <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1 pt-3">
-          {filteredRecents.length === 0 ? (
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-400">
-              No recent chats match this view.
-            </div>
-          ) : (
-            filteredRecents.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => onSelectRecent(item.id)}
-                className="w-full rounded-2xl border border-white/10 bg-black/20 px-3 py-3 text-left transition hover:border-cyan-300/30 hover:bg-white/5"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="truncate text-sm text-slate-100">{item.title}</span>
-                  <ArrowRight className="h-4 w-4 shrink-0 text-slate-500" />
-                </div>
-                {open && <p className="mt-1 line-clamp-1 text-xs text-slate-400">{item.preview}</p>}
-              </button>
-            ))
-          )}
-        </div>
+        {open && (
+          <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1 pt-3">
+            {filteredRecents.length === 0 ? (
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-400">
+                No recent chats yet.
+              </div>
+            ) : (
+              filteredRecents.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => onSelectRecent(item.id)}
+                  className="w-full rounded-2xl border border-white/10 bg-black/20 px-3 py-3 text-left transition hover:border-cyan-300/30 hover:bg-white/5"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="truncate text-sm text-slate-100">{item.title}</span>
+                    <ArrowRight className="h-4 w-4 shrink-0 text-slate-500" />
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+        )}
 
         <button
           type="button"
           onClick={onToggleProfileMenu}
-          className="mt-4 flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 p-3 transition hover:bg-white/10"
+          className="mt-auto flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 p-3 transition hover:bg-white/10"
         >
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-[#d8d6cc] text-[#262626]">
@@ -185,9 +193,6 @@ export default function ChatSidebar({
                 { label: "Settings", icon: Settings },
                 { label: "Language", icon: Globe },
                 { label: "Get help", icon: CircleHelp },
-                { label: "Upgrade plan", icon: ArrowUpRight },
-                { label: "Get apps and extensions", icon: ArrowUpRight },
-                { label: "Gift Quill", icon: Gift },
                 { label: "Learn more", icon: HelpCircle }
               ].map(({ label, icon: Icon }) => (
                 <button
