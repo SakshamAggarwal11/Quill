@@ -14,7 +14,7 @@ import {
   ChevronRight
 } from "lucide-react";
 
-export type SidebarSection = "search" | "chats" | "projects";
+export type SidebarSection = "search" | "chats";
 
 export type RecentThread = {
   id: string;
@@ -99,12 +99,7 @@ export default function ChatSidebar({
                     return;
                   }
 
-                  if (key === "search") {
-                    onSearchChat();
-                    return;
-                  }
-
-                  // onOpenProjects(); // Removed the call to onOpenProjects
+                  onSearchChat();
                 }}
                 className={`flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition ${
                   active ? "bg-white/15 text-[#e7f8ff]" : "text-[#d5e7f3] hover:bg-white/5 hover:text-[#f4fbff]"

@@ -32,8 +32,7 @@ const quickActions = [
 
 const sectionPrompts: Record<SidebarSection, string> = {
   search: "Search your recents or ask me to find something in your chat history.",
-  chats: "Start a fresh conversation or pick a recent thread.",
-  projects: "Project mode is active. Organize ideas, tasks, and milestones."
+  chats: "Start a fresh conversation or pick a recent thread."
 };
 
 const initialRecents: RecentThread[] = [];
@@ -366,7 +365,7 @@ export default function ChatPage() {
               </h1>
             </div>
             <p className="mt-4 text-center text-sm text-slate-400 md:text-base">
-              {activeSection === "projects" ? "Personal project workspace is ready." : activeSection === "search" ? "Search your recent chats quickly." : "Start a fresh conversation in Quill."}
+              {activeSection === "search" ? "Search your recent chats quickly." : "Start a fresh conversation in Quill."}
             </p>
 
             <div className="mt-10 w-full rounded-[22px] border border-white/10 bg-[#07101f]/95 p-5 shadow-[0_22px_56px_rgba(0,0,0,0.45)] md:p-6">
@@ -407,7 +406,7 @@ export default function ChatPage() {
 
                 <div className="flex items-center gap-2">
                   <div className="flex items-center gap-2 text-sm text-slate-400">
-                    <span>{activeSection === "search" ? "Search your recents" : activeSection === "projects" ? "Project workspace" : "Quill Local"}</span>
+                    <span>{activeSection === "search" ? "Search your recents" : "Quill Local"}</span>
                     <svg viewBox="0 0 16 16" className="h-3 w-3 fill-current text-slate-500" aria-hidden="true">
                       <path d="M4 6l4 4 4-4" />
                     </svg>
